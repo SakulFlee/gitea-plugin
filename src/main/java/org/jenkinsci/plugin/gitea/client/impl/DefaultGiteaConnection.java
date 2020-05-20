@@ -45,6 +45,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Set;
 import javax.net.ssl.HttpsURLConnection;
 import jenkins.model.Jenkins;
@@ -246,15 +247,28 @@ class DefaultGiteaConnection implements GiteaConnection {
 
     @Override
     public List<GiteaRepository> fetchOrganizationRepositories(GiteaOwner owner) throws IOException, InterruptedException {
-        return getList(
+        final List<GiteaRepository> masterList = new LinkedList<>();
+
+        int pageCount = 1;
+        List<GiteaRepository> currentRepositoryList = null;
+        while (currentRepositoryList == null || currentRepositoryList.size() != 0) {
+            currentRepositoryList = getList(
                 api()
                         .literal("/orgs")
                         .path(UriTemplateBuilder.var("org"))
                         .literal("/repos")
+                        .query(UriTemplateBuilder.var("page"), UriTemplateBuilder.var("limit"))
                         .build()
-                        .set("org", owner.getUsername()),
+                        .set("org", owner.getUsername())
+                        .set("page", pageCount++)
+                        .set("limit", 50),
                 GiteaRepository.class
-        );
+            );
+
+            masterList.addAll(currentRepositoryList);
+        }
+
+        return masterList;
     }
 
     @Override
