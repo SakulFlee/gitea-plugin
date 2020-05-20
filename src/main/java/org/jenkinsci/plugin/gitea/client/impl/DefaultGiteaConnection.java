@@ -225,15 +225,28 @@ class DefaultGiteaConnection implements GiteaConnection {
 
     @Override
     public List<GiteaRepository> fetchRepositories(String username) throws IOException, InterruptedException {
-        return getList(
+        final List<GiteaRepository> masterList = new LinkedList<>();
+
+        int pageCount = 1;
+        List<GiteaRepository> currentRepositoryList = null;
+        while (currentRepositoryList == null || currentRepositoryList.size() != 0) {
+            currentRepositoryList = getList(
                 api()
                         .literal("/users")
                         .path(UriTemplateBuilder.var("username"))
                         .literal("/repos")
+                        .query(UriTemplateBuilder.var("page"), UriTemplateBuilder.var("limit"))
                         .build()
-                        .set("username", username),
+                        .set("username", username)
+                        .set("page", pageCount++)
+                        .set("limit", 50),
                 GiteaRepository.class
-        );
+            );
+    
+            masterList.addAll(currentRepositoryList);
+        }
+    
+        return masterList;
     }
 
     @Override
